@@ -87,26 +87,37 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) : ReactContextBa
 
   private fun renderPage(pdfRenderer: PdfRenderer, page: Int, filePath: String, quality: Int): WritableNativeMap {
     val currentPage = pdfRenderer.openPage(page)
-    val width = currentPage.width
-    val height = currentPage.height
+    val scaleFactor = 2f // Scale factor for rendering the bitmap
+
+    val width = (currentPage.width * scaleFactor).toInt()
+    val height = (currentPage.height * scaleFactor).toInt()
     val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+
+    // Scale the canvas to match the bitmap's dimensions
+    val canvas = Canvas(bitmap)
+    canvas.scale(scaleFactor, scaleFactor)
+    canvas.drawColor(Color.WHITE)
+
     currentPage.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
     currentPage.close()
 
     // Some bitmaps have transparent background which results in a black thumbnail. Add a white background.
-    val bitmapWhiteBG = Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config)
-    bitmapWhiteBG.eraseColor(Color.WHITE)
-    val canvas = Canvas(bitmapWhiteBG)
-    canvas.drawBitmap(bitmap, 0f, 0f, null)
+    //val bitmapWhiteBG = Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config)
+    //bitmapWhiteBG.eraseColor(Color.WHITE)
+    //val canvas = Canvas(bitmapWhiteBG)
+    //canvas.drawBitmap(bitmap, 0f, 0f, null)
+
+    // Perform the downscale to the desired size
+    val scaledBitmap = Bitmap.createScaledBitmap(bitmap, width, height, true)
     bitmap.recycle()
 
-    val outputFile = File.createTempFile(getOutputFilePrefix(filePath, page), ".jpg", reactApplicationContext.cacheDir)
+    val outputFile = File.createTempFile(getOutputFilePrefix(filePath, page), ".png", reactApplicationContext.cacheDir)
     if (outputFile.exists()) {
       outputFile.delete()
     }
     val out = FileOutputStream(outputFile)
-    bitmapWhiteBG.compress(Bitmap.CompressFormat.JPEG, quality, out)
-    bitmapWhiteBG.recycle()
+    scaledBitmap.compress(Bitmap.CompressFormat.PNG, quality, out)
+    scaledBitmap.recycle()
     out.flush()
     out.close()
 
