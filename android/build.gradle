@@ -134,6 +134,8 @@ dependencies {
   implementation "com.facebook.react:react-native:+"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 // From node_modules
+
+  implementation 'com.tom-roush:pdfbox-android:2.0.27.0'
 }
 
 if (isNewArchitectureEnabled()) {
