@@ -26,6 +26,7 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) : ReactContextBa
 
   @ReactMethod
   fun generate(filePath: String, page: Int, quality: Int, promise: Promise) {
+    PDFBoxResourceLoader.init(this.reactApplicationContext);
     var parcelFileDescriptor: ParcelFileDescriptor? = null
     var pdfRenderer: PdfRenderer? = null
     try {
