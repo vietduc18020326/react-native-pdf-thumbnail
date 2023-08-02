@@ -1,4 +1,5 @@
 import PDFKit
+import Foundation
 
 @objc(PdfThumbnail)
 class PdfThumbnail: NSObject {
@@ -17,10 +18,18 @@ class PdfThumbnail: NSObject {
         let components = filePath.components(separatedBy: "/")
         var prefix: String
         if let origionalFileName = components.last {
-            prefix = origionalFileName.replacingOccurrences(of: ".", with: "-")
+            prefix = String(
+                origionalFileName.replacingOccurrences(
+                    of: "[^a-zA-Z0-9]", // This regex matches any character that is not a letter or a digit
+                    with: "-",
+                    options: .regularExpression,
+                    range: nil
+                ).prefix(20)
+            )
         } else {
             prefix = "pdf"
         }
+
         let random = Int.random(in: 0 ..< Int.max)
         return "\(prefix)-thumbnail-\(page)-\(random).jpg"
     }
