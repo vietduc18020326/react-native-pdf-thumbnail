@@ -46,34 +46,16 @@ class PdfThumbnail: NSObject {
     }
 
     func generatePage(pdfPage: PDFPage, filePath: String, page: Int, quality: Int) -> Dictionary<String, Any>? {
-//        let pageRect = pdfPage.bounds(for: .mediaBox)
-//        let imageSize = CGSize(width: pageRect.width * 2, height: pageRect.height * 2)
-//        let image = pdfPage.thumbnail(of: imageSize, for: .mediaBox)
-//        var outputFile = getCachesDirectory().appendingPathComponent(getOutputFilename(filePath: filePath, page: page))
-//        guard let data = image.jpegData(compressionQuality: CGFloat(quality) / 100) else {
-//            return nil
-//        }
-//
-//        defer {
-//                // Close the file after writing data
-//                // This block will be executed before the function returns
-//                // regardless of how the function exits
-//            outputFile.deletePathExtension()
-//            }
-//
-//        do {
-//            try data.write(to: outputFile)
-//            return [
-//                "uri": outputFile.absoluteString,
-//                "width": Int(pageRect.width),
-//                "height": Int(pageRect.height),
-//            ]
-//        } catch {
-//            return nil
-//        }
         autoreleasepool {
             let pageRect = pdfPage.bounds(for: .mediaBox)
-            let imageSize = CGSize(width: pageRect.width, height: pageRect.height)
+            let imageSize: CGSize
+
+            if (pageRect.width < pageRect.height && pdfPage.rotation % 180 == 90) {
+                imageSize = CGSize(width: pageRect.height, height: pageRect.width)
+            }
+            else {
+                imageSize = CGSize(width: pageRect.width, height: pageRect.height)
+            }
 
             // Generate the thumbnail image
             let image = pdfPage.thumbnail(of: imageSize, for: .mediaBox)
@@ -81,7 +63,7 @@ class PdfThumbnail: NSObject {
             let outputFile = getCachesDirectory().appendingPathComponent(getOutputFilename(filePath: filePath, page: page))
 
             // Reduce the image size for memory efficiency
-            let resizedImage = image.resized(to: imageSize, pageRect: pageRect, pdfPage: pdfPage)
+            let resizedImage = image.resized(to: imageSize,pageRect: pageRect, pdfPage: pdfPage)
 
             // Convert the resized image to JPEG data with specified compression quality
             let data = resizedImage?.jpegData(compressionQuality: CGFloat(quality))
@@ -156,14 +138,37 @@ class PdfThumbnail: NSObject {
 
 extension UIImage {
     func resized(to size: CGSize, pageRect: CGRect,pdfPage: PDFPage) -> UIImage? {
-         let renderer = UIGraphicsImageRenderer(size: size)
+        let renderer = UIGraphicsImageRenderer(size: size)
         return renderer.image { ctx in
             // Set and fill the background color.
             UIColor.white.set()
             ctx.fill(CGRect(x: 0, y: 0, width: size.width, height: size.height))
 
+            // Calculate translation offsets to center the content.
+            var xOffset: CGFloat = 0
+            var yOffset: CGFloat = 0
+
+            // Handle vertically oriented pages
+            if pageRect.width < pageRect.height {
+                if pdfPage.rotation % 180 == 90 {
+                    print(pageRect.height, pageRect.origin.y)
+                    xOffset = -pageRect.origin.x
+                    yOffset = pageRect.width
+                }
+                else {
+                    xOffset = -pageRect.origin.x
+                    yOffset = pageRect.height - pageRect.origin.y
+                }
+            }
+            // Handle horizontally oriented pages
+            else {
+                xOffset = -pageRect.origin.x
+                yOffset = pageRect.height - pageRect.origin.y
+            }
+
+
             // Translate the context so that we only draw the `cropRect`.
-            ctx.cgContext.translateBy(x: -pageRect.origin.x, y: pageRect.size.height - pageRect.origin.y)
+            ctx.cgContext.translateBy(x: xOffset, y: yOffset)
 
             // Flip the context vertically because the Core Graphics coordinate system starts from the bottom.
             ctx.cgContext.scaleBy(x: 1.0, y: -1.0)
